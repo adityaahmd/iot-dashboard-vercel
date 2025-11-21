@@ -87,7 +87,7 @@
         // Fungsi untuk mengambil data terbaru dari ThingSpeak
         function fetchData() {
             // URL API ThingSpeak untuk mengambil data entri terakhir (last.json)
-            const url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds/last.json?api_key=${READ_API_KEY}`;
+            const url = `https://api.thingspeak.com/update/${CHANNEL_ID}/feeds/last.json?api_key=${READ_API_KEY}`;
             
             // Perbarui log status
             document.getElementById('status-log').innerText = `Mencoba mengambil data dari Channel ID ${CHANNEL_ID}...`;
@@ -135,4 +135,5 @@
 
     </script>
 </body>
+
 </html>
