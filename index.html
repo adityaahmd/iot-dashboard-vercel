@@ -80,14 +80,14 @@
         // ==========================================================
 
         // --- GANTI DENGAN NILAI ANDA ---
-        const CHANNEL_ID = 'DDB2GM7C7ZISO8I1'; // ID Channel ThingSpeak Anda (misalnya: 247854)
-        const READ_API_KEY = ''; // Kunci API Baca (Kosongkan '' jika channel Anda Publik)
+        const CHANNEL_ID = '3174100'; // ID Channel ThingSpeak Anda (misalnya: 247854)
+        const READ_API_KEY = 'SR5E6Q6Y7E4RBDQ1'; // Kunci API Baca (Kosongkan '' jika channel Anda Publik)
         // -------------------------------
 
         // Fungsi untuk mengambil data terbaru dari ThingSpeak
         function fetchData() {
             // URL API ThingSpeak untuk mengambil data entri terakhir (last.json)
-            const url = `https://api.thingspeak.com/update/${CHANNEL_ID}/feeds/last.json?api_key=${READ_API_KEY}`;
+            const url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds/last.json?api_key=${READ_API_KEY}`;
             
             // Perbarui log status
             document.getElementById('status-log').innerText = `Mencoba mengambil data dari Channel ID ${CHANNEL_ID}...`;
@@ -137,3 +137,4 @@
 </body>
 
 </html>
+
