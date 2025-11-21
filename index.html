@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard IoT ThingSpeak (Vercel Ready)</title>
+    <!-- Memuat Tailwind CSS untuk styling yang cepat dan modern -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font untuk estetika yang lebih baik */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+        }
+        .data-card {
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            cursor: default;
+        }
+        .data-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center py-6 bg-white rounded-xl shadow-md mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Dashboard Sensor ESP32 Real-Time</h1>
+            <p class="text-sm text-gray-500 mt-1">Di-*Host* oleh Vercel, Data dari ThingSpeak</p>
+        </header>
+
+        <!-- Container Data Card -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+            <!-- Card Suhu (Field 1) -->
+            <div class="data-card bg-white p-6 rounded-xl shadow-lg border-t-4 border-red-500">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-semibold text-gray-700">Suhu Udara</h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.727A8 8 0 016.343 4.273S7.5 7.5 12 7.5s4.5-3.227 5.657-3.227zM20.5 10.5h-17M12 21a2 2 0 01-2-2v-6a2 2 0 014 0v6a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <p class="text-5xl font-extrabold text-gray-900 mt-4">
+                    <span id="temperature" class="text-red-600">--</span>
+                    <span class="text-3xl font-light text-gray-500">°C</span>
+                </p>
+                <p class="text-xs text-gray-400 mt-2">Update Terakhir: <span id="temp-timestamp">--</span></p>
+            </div>
+
+            <!-- Card Kelembaban (Field 2) -->
+            <div class="data-card bg-white p-6 rounded-xl shadow-lg border-t-4 border-blue-500">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-semibold text-gray-700">Kelembaban Udara</h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4 4 0 003 15z" />
+                    </svg>
+                </div>
+                <p class="text-5xl font-extrabold text-gray-900 mt-4">
+                    <span id="humidity" class="text-blue-600">--</span>
+                    <span class="text-3xl font-light text-gray-500">%</span>
+                </p>
+                <p class="text-xs text-gray-400 mt-2">Update Terakhir: <span id="hum-timestamp">--</span></p>
+            </div>
+
+        </div>
+
+        <!-- Bagian Status dan Log -->
+        <div class="mt-8 p-4 bg-yellow-100 border border-yellow-300 rounded-xl text-sm text-yellow-800">
+            <p class="font-semibold">Status Koneksi:</p>
+            <p id="status-log">Memuat data...</p>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================================
+        // KONFIGURASI DAN LOGIKA JAVASCRIPT
+        // ==========================================================
+
+        // --- GANTI DENGAN NILAI ANDA ---
+        const CHANNEL_ID = 'DDB2GM7C7ZISO8I1'; // ID Channel ThingSpeak Anda (misalnya: 247854)
+        const READ_API_KEY = ''; // Kunci API Baca (Kosongkan '' jika channel Anda Publik)
+        // -------------------------------
+
+        // Fungsi untuk mengambil data terbaru dari ThingSpeak
+        function fetchData() {
+            // URL API ThingSpeak untuk mengambil data entri terakhir (last.json)
+            const url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds/last.json?api_key=${READ_API_KEY}`;
+            
+            // Perbarui log status
+            document.getElementById('status-log').innerText = `Mencoba mengambil data dari Channel ID ${CHANNEL_ID}...`;
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Pastikan data yang diterima memiliki field yang diharapkan
+                    if (data && data.created_at) {
+                        const temp = data.field1; // Data Suhu (Field 1)
+                        const hum = data.field2; // Data Kelembaban (Field 2)
+                        const timestamp = new Date(data.created_at).toLocaleString();
+
+                        // Update tampilan di dashboard
+                        document.getElementById('temperature').innerText = temp ? parseFloat(temp).toFixed(1) : '--';
+                        document.getElementById('humidity').innerText = hum ? parseFloat(hum).toFixed(1) : '--';
+                        document.getElementById('temp-timestamp').innerText = timestamp;
+                        document.getElementById('hum-timestamp').innerText = timestamp;
+
+                        // Log Sukses
+                        document.getElementById('status-log').innerText = `Data sukses diterima! Suhu: ${temp}°C, Kelembaban: ${hum}%.`;
+                    } else {
+                         document.getElementById('status-log').innerText = "Data diterima, namun kosong. Pastikan ESP32 mengirim data.";
+                    }
+                })
+                .catch(error => {
+                    console.error('FETCH ERROR:', error);
+                    document.getElementById('status-log').innerText = `ERROR: Gagal mengambil data. Cek Channel ID, API Key, atau koneksi: ${error.message}`;
+                    // Jika gagal, tampilkan placeholder
+                    document.getElementById('temperature').innerText = 'ERR';
+                    document.getElementById('humidity').innerText = 'ERR';
+                });
+        }
+
+        // Panggil fungsi fetchData pertama kali saat halaman dimuat
+        fetchData();
+
+        // Atur interval agar data di-refresh setiap 5 detik (5000 milidetik)
+        setInterval(fetchData, 5000);
+
+    </script>
+</body>
+</html>
