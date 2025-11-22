@@ -1,140 +1,414 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard IoT ThingSpeak (Vercel Ready)</title>
-    <!-- Memuat Tailwind CSS untuk styling yang cepat dan modern -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Sistem Irigasi - ThingSpeak Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Custom font untuk estetika yang lebih baik */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        :root {
+            --font-main: 'Inter', sans-serif;
+            --sidebar-width: 240px;
+            --sidebar-mini: 70px;
+        }
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f7f7f7;
+            font-family: var(--font-main);
+            background-color: #f3f4f6;
+            color: #374151;
         }
-        .data-card {
-            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-            cursor: default;
-        }
-        .data-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        /* Style dasar tetap dipertahankan */
+        .clean-card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02);
         }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="h-screen flex overflow-hidden">
 
-    <div class="max-w-4xl mx-auto">
-        <header class="text-center py-6 bg-white rounded-xl shadow-md mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">Dashboard Sensor ESP32 Real-Time</h1>
-            <p class="text-sm text-gray-500 mt-1">Di-*Host* oleh Vercel, Data dari ThingSpeak</p>
+    <aside id="sidebar" class="sidebar bg-white border-r border-gray-200 flex flex-col z-20">
+        <div class="h-16 flex items-center px-6 border-b border-gray-100 logo-container transition-all">
+            <div class="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">
+                S
+            </div>
+            <span class="logo-text ml-3 font-bold text-lg tracking-tight text-gray-800">SIP <span class="font-normal text-gray-400">V3</span></span>
+        </div>
+
+        <nav class="flex-1 px-3 py-6 space-y-1">
+            <button class="nav-btn w-full active" data-target="dashboard" title="Dashboard">
+                <svg class="w-5 h-5 flex-shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                <span class="nav-label ml-3">Dashboard</span>
+            </button>
+            <button class="nav-btn w-full" data-target="grafik" title="Grafik & Analitik">
+                <svg class="w-5 h-5 flex-shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4 2 2M3 12h18M5 15h14M5 9h14"/></svg>
+                <span class="nav-label ml-3">Grafik Data</span>
+            </button>
+            <button class="nav-btn w-full" data-target="ringkasan" title="Riwayat Data">
+                <svg class="w-5 h-5 flex-shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <span class="nav-label ml-3">Riwayat Log</span>
+            </button>
+        </nav>
+        
+        <div class="p-4 border-t border-gray-100 text-xs text-gray-400 text-center footer-text">
+            &copy; 2025 Smart System
+        </div>
+    </aside>
+    <div class="flex-1 flex flex-col h-full relative min-w-0">
+        
+        <header class="h-16 bg-white/90 backdrop-blur border-b border-gray-200 flex justify-between items-center px-4 sticky top-0 z-10">
+            <div class="flex items-center gap-4">
+                <button id="burgerBtn" class="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+                <h1 class="text-base md:text-lg font-bold text-gray-800 truncate">Sistem Irigasi Pintar (ThingSpeak Data)</h1>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="hidden sm:block text-right">
+                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Waktu Server</p>
+                    <p id="currentTime" class="text-sm font-mono font-medium text-gray-700">--:--:--</p>
+                </div>
+                <div class="flex items-center bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
+                    <div id="connIndicator" class="w-2 h-2 rounded-full bg-gray-300 mr-2"></div>
+                    <span id="connText" class="text-xs font-semibold text-gray-500">Memuat...</span>
+                </div>
+            </div>
         </header>
 
-        <!-- Container Data Card -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-
-            <!-- Card Suhu (Field 1) -->
-            <div class="data-card bg-white p-6 rounded-xl shadow-lg border-t-4 border-red-500">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-xl font-semibold text-gray-700">Suhu Udara</h2>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.727A8 8 0 016.343 4.273S7.5 7.5 12 7.5s4.5-3.227 5.657-3.227zM20.5 10.5h-17M12 21a2 2 0 01-2-2v-6a2 2 0 014 0v6a2 2 0 01-2 2z"/>
-                    </svg>
+        <div id="contentArea" class="flex-1 overflow-hidden relative p-4 md:p-6">
+            
+            <main id="dashboard" class="tab-content h-full flex flex-col gap-6 overflow-y-auto pb-20">
+                
+                <div class="clean-card px-5 py-4 flex items-center justify-between flex-wrap gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-full bg-green-50 text-green-600">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <div id="status-log-thing" class="text-sm font-semibold text-gray-700">Menunggu data sensor ThingSpeak...</div>
+                    </div>
+                    <div class="flex gap-4 md:gap-8 text-sm">
+                         <div><span class="block text-[10px] text-gray-400 uppercase font-bold">Terakhir</span><span id="last-update" class="font-bold text-gray-800">-</span></div>
+                         <div><span class="block text-[10px] text-gray-400 uppercase font-bold">Cahaya</span><span id="lightSummary" class="font-bold text-gray-800">-</span></div>
+                    </div>
                 </div>
-                <p class="text-5xl font-extrabold text-gray-900 mt-4">
-                    <span id="temperature" class="text-red-600">--</span>
-                    <span class="text-3xl font-light text-gray-500">°C</span>
-                </p>
-                <p class="text-xs text-gray-400 mt-2">Update Terakhir: <span id="temp-timestamp">--</span></p>
-            </div>
 
-            <!-- Card Kelembaban (Field 2) -->
-            <div class="data-card bg-white p-6 rounded-xl shadow-lg border-t-4 border-blue-500">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-xl font-semibold text-gray-700">Kelembaban Udara</h2>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4 4 0 003 15z" />
-                    </svg>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="clean-card p-4 hover:shadow-md transition-all">
+                        <div class="flex justify-between items-start mb-1">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">pH Tanah 1</p>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Field 1</span>
+                        </div>
+                        <p id="ph1Value" class="text-2xl font-bold text-gray-800">-</p>
+                        <p id="ph1Status" class="text-[10px] mt-1 text-gray-400 font-medium">Scanning...</p>
+                    </div>
+                    <div class="clean-card p-4 hover:shadow-md transition-all">
+                        <div class="flex justify-between items-start mb-1">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Tanah 1</p>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Field 2</span>
+                        </div>
+                        <p id="soil1Value" class="text-2xl font-bold text-gray-800">-</p>
+                        <p id="soil1Status" class="text-[10px] mt-1 text-gray-400 font-medium">Scanning...</p>
+                    </div>
+                    <div class="clean-card p-4 hover:shadow-md transition-all">
+                        <div class="flex justify-between items-start mb-1">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Suhu Udara</p>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Field 3</span>
+                        </div>
+                        <p id="tempValue" class="text-2xl font-bold text-gray-800">-</p>
+                        <p id="tempStatus" class="text-[10px] mt-1 text-gray-400 font-medium">Scanning...</p>
+                    </div>
+                    <div class="clean-card p-4 hover:shadow-md transition-all">
+                        <div class="flex justify-between items-start mb-1">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Cahaya</p>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Field 4</span>
+                        </div>
+                        <p id="lightValue" class="text-2xl font-bold text-gray-800">-</p>
+                        <p id="lightStatus" class="text-[10px] mt-1 text-gray-400 font-medium">Scanning...</p>
+                    </div>
+                    <div class="clean-card p-4 hover:shadow-md transition-all">
+                        <div class="flex justify-between items-start mb-1">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">pH Tanah 2</p>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Field 5</span>
+                        </div>
+                        <p id="ph2Value" class="text-2xl font-bold text-gray-800">-</p>
+                        <p id="ph2Status" class="text-[10px] mt-1 text-gray-400 font-medium">Scanning...</p>
+                    </div>
+                    <div class="clean-card p-4 hover:shadow-md transition-all">
+                        <div class="flex justify-between items-start mb-1">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Tanah 2</p>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Field 6</span>
+                        </div>
+                        <p id="soil2Value" class="text-2xl font-bold text-gray-800">-</p>
+                        <p id="soil2Status" class="text-[10px] mt-1 text-gray-400 font-medium">Scanning...</p>
+                    </div>
+                    <div class="clean-card p-4 hover:shadow-md transition-all">
+                        <div class="flex justify-between items-start mb-1">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Kelembapan</p>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Field 7</span>
+                        </div>
+                        <p id="humValue" class="text-2xl font-bold text-gray-800">-</p>
+                        <p id="humStatus" class="text-[10px] mt-1 text-gray-400 font-medium">Scanning...</p>
+                    </div>
+                    <div class="clean-card p-4 flex items-center justify-center border-dashed bg-gray-50">
+                        <span class="text-[10px] font-bold text-gray-300 uppercase">Field 8</span>
+                    </div>
                 </div>
-                <p class="text-5xl font-extrabold text-gray-900 mt-4">
-                    <span id="humidity" class="text-blue-600">--</span>
-                    <span class="text-3xl font-light text-gray-500">%</span>
-                </p>
-                <p class="text-xs text-gray-400 mt-2">Update Terakhir: <span id="hum-timestamp">--</span></p>
-            </div>
 
+                <div class="mt-8 p-4 bg-red-100 border border-red-300 rounded-xl text-sm text-red-800">
+                    <p class="font-bold">⚠️ Perhatian: Kontrol Aktuator Nonaktif</p>
+                    <p>Fungsi kontrol Pompa (ON/OFF) dan Atap Otomatis dinonaktifkan karena ThingSpeak API tidak mendukung perintah kontrol dua arah (hanya membaca data). Untuk kontrol, Anda memerlukan server API publik/cloud.</p>
+                </div>
+
+            </main>
+
+            <main id="grafik" class="tab-content hidden h-full overflow-y-auto pb-20">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-lg font-bold text-gray-800">Analisis Grafik</h2>
+                    <div class="flex bg-white border border-gray-200 p-1 rounded-lg shadow-sm">
+                        <button id="subSensorEnv" class="px-4 py-1 text-xs font-bold uppercase rounded transition-all bg-gray-800 text-white">Lingkungan</button>
+                        <button id="subSensorSoil" class="px-4 py-1 text-xs font-bold uppercase rounded transition-all text-gray-500 hover:bg-gray-50">Tanah</button>
+                    </div>
+                </div>
+
+                <div id="envCharts" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="clean-card p-4 h-64 lg:col-span-2"><h3 class="text-xs font-bold text-gray-400 uppercase mb-2">Intensitas Cahaya (Lx) - Field 4</h3><div class="h-full pb-5"><canvas id="chartLight"></canvas></div></div>
+                    <div class="clean-card p-4 h-64"><h3 class="text-xs font-bold text-gray-400 uppercase mb-2">Suhu Udara (°C) - Field 3</h3><div class="h-full pb-5"><canvas id="chartSuhu"></canvas></div></div>
+                    <div class="clean-card p-4 h-64"><h3 class="text-xs font-bold text-gray-400 uppercase mb-2">Kelembapan Udara (%) - Field 7</h3><div class="h-full pb-5"><canvas id="chartKelembapan"></canvas></div></div>
+                </div>
+                <div id="soilCharts" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="clean-card p-4 h-64"><h3 class="text-xs font-bold text-gray-400 uppercase mb-2">pH Tanah 1 - Field 1</h3><div class="h-full pb-5"><canvas id="chartPH1"></canvas></div></div>
+                    <div class="clean-card p-4 h-64"><h3 class="text-xs font-bold text-gray-400 uppercase mb-2">pH Tanah 2 - Field 5</h3><div class="h-full pb-5"><canvas id="chartPH2"></canvas></div></div>
+                    <div class="clean-card p-4 h-64"><h3 class="text-xs font-bold text-gray-400 uppercase mb-2">Moisture Tanah 1 (%) - Field 2</h3><div class="h-full pb-5"><canvas id="chartSoil1"></canvas></div></div>
+                    <div class="clean-card p-4 h-64"><h3 class="text-xs font-bold text-gray-400 uppercase mb-2">Moisture Tanah 2 (%) - Field 6</h3><div class="h-full pb-5"><canvas id="chartSoil2"></canvas></div></div>
+                </div>
+            </main>
+
+            <main id="ringkasan" class="tab-content hidden h-full overflow-y-auto pb-20">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-lg font-bold text-gray-800">Tabel Data</h2>
+                    <a href="#" target="_blank" class="btn-action bg-gray-800 text-white border-transparent hover:bg-gray-700 text-xs uppercase tracking-wide">
+                        Buka Spreadsheet
+                    </a>
+                </div>
+                <div class="clean-card overflow-hidden">
+                    <table class="w-full text-sm text-left text-gray-600">
+                        <thead class="bg-gray-50 text-gray-400 uppercase text-[10px] font-bold tracking-wider border-b border-gray-100">
+                            <tr>
+                                <th class="px-4 py-3">Waktu</th>
+                                <th class="px-4 py-3">pH1 (F1)</th>
+                                <th class="px-4 py-3">pH2 (F5)</th>
+                                <th class="px-4 py-3">Suhu (F3)</th>
+                                <th class="px-4 py-3">RH (F7)</th>
+                                <th class="px-4 py-3">Tnh1 (F2)</th>
+                                <th class="px-4 py-3">Tnh2 (F6)</th>
+                                <th class="px-4 py-3">Lux (F4)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logTableBody" class="divide-y divide-gray-50"></tbody>
+                    </table>
+                </div>
+                <div class="grid grid-cols-3 gap-4 mt-6">
+                    <div class="clean-card p-4 text-center"><p class="text-[10px] text-gray-400 font-bold uppercase">Avg Suhu</p><p id="avgTemp" class="text-xl font-bold text-gray-800 mt-1">-</p></div>
+                    <div class="clean-card p-4 text-center"><p class="text-[10px] text-gray-400 font-bold uppercase">Avg RH</p><p id="avgHum" class="text-xl font-bold text-gray-800 mt-1">-</p></div>
+                    <div class="clean-card p-4 text-center"><p class="text-[10px] text-gray-400 font-bold uppercase">Avg Cahaya</p><p id="avgLight" class="text-xl font-bold text-gray-800 mt-1">-</p></div>
+                </div>
+            </main>
         </div>
-
-        <!-- Bagian Status dan Log -->
-        <div class="mt-8 p-4 bg-yellow-100 border border-yellow-300 rounded-xl text-sm text-yellow-800">
-            <p class="font-semibold">Status Koneksi:</p>
-            <p id="status-log">Memuat data...</p>
-        </div>
-
     </div>
 
     <script>
         // ==========================================================
-        // KONFIGURASI DAN LOGIKA JAVASCRIPT
+        // KONFIGURASI THING SPEAK - HARAP GANTI NILAI INI
         // ==========================================================
-
-        // --- GANTI DENGAN NILAI ANDA ---
+         // --- GANTI DENGAN NILAI ANDA ---
         const CHANNEL_ID = '3174100'; // ID Channel ThingSpeak Anda (misalnya: 247854)
         const READ_API_KEY = 'SR5E6Q6Y7E4RBDQ1'; // Kunci API Baca (Kosongkan '' jika channel Anda Publik)
         // -------------------------------
+        // ==========================================================
+        
+        // Mapping ThingSpeak Fields ke Variabel Sensor:
+        const FIELD_MAPPING = {
+            ph1: 'field1', // pH Tanah 1
+            soil1: 'field2', // Moisture Tanah 1
+            temp: 'field3', // Suhu Udara
+            light: 'field4', // Cahaya
+            ph2: 'field5', // pH Tanah 2
+            soil2: 'field6', // Moisture Tanah 2
+            hum: 'field7', // Kelembapan Udara
+            // field8: 'field8', // Cadangan
+        };
 
-        // Fungsi untuk mengambil data terbaru dari ThingSpeak
-        function fetchData() {
-            // URL API ThingSpeak untuk mengambil data entri terakhir (last.json)
-            const url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds/last.json?api_key=${READ_API_KEY}`;
-            
-            // Perbarui log status
-            document.getElementById('status-log').innerText = `Mencoba mengambil data dari Channel ID ${CHANNEL_ID}...`;
+        // --- TOGGLE SIDEBAR & NAVIGATION (Tetap sama) ---
+        const sidebar = document.getElementById('sidebar');
+        const burgerBtn = document.getElementById('burgerBtn');
+        burgerBtn.addEventListener('click', () => { sidebar.classList.toggle('collapsed'); });
+        
+        const navBtns = document.querySelectorAll('.nav-btn');
+        const contents = document.querySelectorAll('.tab-content');
+        function switchTab(targetId) {
+            navBtns.forEach(b => b.classList.remove('active'));
+            const activeBtn = document.querySelector(`.nav-btn[data-target="${targetId}"]`);
+            if(activeBtn) activeBtn.classList.add('active');
+            contents.forEach(c => c.classList.add('hidden'));
+            document.getElementById(targetId).classList.remove('hidden');
+        }
+        navBtns.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.target)));
 
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Pastikan data yang diterima memiliki field yang diharapkan
-                    if (data && data.created_at) {
-                        const temp = data.field1; // Data Suhu (Field 1)
-                        const hum = data.field2; // Data Kelembaban (Field 2)
-                        const timestamp = new Date(data.created_at).toLocaleString();
+        // --- SUBTABS GRAFIK (Tetap sama) ---
+        const btnEnv = document.getElementById('subSensorEnv');
+        const btnSoil = document.getElementById('subSensorSoil');
+        const divEnv = document.getElementById('envCharts');
+        const divSoil = document.getElementById('soilCharts');
+        
+        btnEnv.addEventListener('click', () => {
+            btnEnv.className = "px-4 py-1 text-xs font-bold uppercase rounded transition-all bg-gray-800 text-white";
+            btnSoil.className = "px-4 py-1 text-xs font-bold uppercase rounded transition-all text-gray-500 hover:bg-gray-50";
+            divEnv.classList.remove('hidden'); divSoil.classList.add('hidden');
+        });
+        btnSoil.addEventListener('click', () => {
+            btnSoil.className = "px-4 py-1 text-xs font-bold uppercase rounded transition-all bg-gray-800 text-white";
+            btnEnv.className = "px-4 py-1 text-xs font-bold uppercase rounded transition-all text-gray-500 hover:bg-gray-50";
+            divSoil.classList.remove('hidden'); divEnv.classList.add('hidden');
+        });
 
-                        // Update tampilan di dashboard
-                        document.getElementById('temperature').innerText = temp ? parseFloat(temp).toFixed(1) : '--';
-                        document.getElementById('humidity').innerText = hum ? parseFloat(hum).toFixed(1) : '--';
-                        document.getElementById('temp-timestamp').innerText = timestamp;
-                        document.getElementById('hum-timestamp').innerText = timestamp;
+        // --- CLOCK ---
+        setInterval(() => { document.getElementById('currentTime').textContent = new Date().toLocaleTimeString('en-GB'); }, 1000);
 
-                        // Log Sukses
-                        document.getElementById('status-log').innerText = `Data sukses diterima! Suhu: ${temp}°C, Kelembaban: ${hum}%.`;
-                    } else {
-                         document.getElementById('status-log').innerText = "Data diterima, namun kosong. Pastikan ESP32 mengirim data.";
-                    }
-                })
-                .catch(error => {
-                    console.error('FETCH ERROR:', error);
-                    document.getElementById('status-log').innerText = `ERROR: Gagal mengambil data. Cek Channel ID, API Key, atau koneksi: ${error.message}`;
-                    // Jika gagal, tampilkan placeholder
-                    document.getElementById('temperature').innerText = 'ERR';
-                    document.getElementById('humidity').innerText = 'ERR';
-                });
+        // --- CHART CONFIG & INIT (Tetap sama) ---
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = '#9ca3af';
+        Chart.defaults.scale.grid.color = '#f9fafb';
+
+        function createChart(ctx, label) {
+            const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(55, 65, 81, 0.05)');
+            gradient.addColorStop(1, 'rgba(55, 65, 81, 0)');
+
+            return new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [{ label, data: [], borderColor: '#4b5563', backgroundColor: gradient, borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.4 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1f2937', padding: 8, cornerRadius: 6, displayColors: false } },
+                    scales: { x: { grid: { display: false }, ticks: { display: false } }, y: { border: { dash: [4, 4] }, grid: { color: '#f3f4f6' } } }
+                }
+            });
         }
 
-        // Panggil fungsi fetchData pertama kali saat halaman dimuat
-        fetchData();
+        const charts = {
+            temp: createChart(document.getElementById('chartSuhu'), 'Suhu'),
+            hum: createChart(document.getElementById('chartKelembapan'), 'Kelembapan'),
+            light: createChart(document.getElementById('chartLight'), 'Cahaya'),
+            ph1: createChart(document.getElementById('chartPH1'), 'pH 1'),
+            ph2: createChart(document.getElementById('chartPH2'), 'pH 2'),
+            soil1: createChart(document.getElementById('chartSoil1'), 'Tanah 1'),
+            soil2: createChart(document.getElementById('chartSoil2'), 'Tanah 2'),
+        };
 
-        // Atur interval agar data di-refresh setiap 5 detik (5000 milidetik)
+        function updateChartData(chart, label, value) {
+            chart.data.labels.push(label);
+            chart.data.datasets[0].data.push(value);
+            // Batasi data 20 entri
+            if(chart.data.labels.length > 20) { chart.data.labels.shift(); chart.data.datasets[0].data.shift(); }
+            chart.update();
+        }
+
+        // --- LOGIKA PENGAMBILAN DATA THINGSPEAK (BARU) ---
+        const THING_API_URL = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds/last.json?api_key=${READ_API_KEY}`;
+        const dataHistory = { temp:[], hum:[], light:[] };
+
+        async function fetchData() {
+            try {
+                const res = await fetch(THING_API_URL).catch(()=>null);
+                if(!res || !res.ok) throw new Error('Response Error');
+                const data = await res.json();
+                
+                if (!data || !data.created_at) throw new Error('No data received');
+
+                // Update Status Koneksi
+                document.getElementById('connIndicator').className = "w-2 h-2 rounded-full bg-green-500 mr-2";
+                document.getElementById('connText').innerText = "Online (TS)";
+                document.getElementById('connText').className = "text-xs font-semibold text-green-600";
+                
+                const time = new Date(data.created_at).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+
+                // Ambil Data dari ThingSpeak fields (string)
+                const v = {
+                    ph1: parseFloat(data[FIELD_MAPPING.ph1]) || 0,
+                    soil1: parseFloat(data[FIELD_MAPPING.soil1]) || 0,
+                    temp: parseFloat(data[FIELD_MAPPING.temp]) || 0,
+                    light: parseFloat(data[FIELD_MAPPING.light]) || 0,
+                    ph2: parseFloat(data[FIELD_MAPPING.ph2]) || 0,
+                    soil2: parseFloat(data[FIELD_MAPPING.soil2]) || 0,
+                    hum: parseFloat(data[FIELD_MAPPING.hum]) || 0,
+                };
+
+                // Fungsi untuk menampilkan nilai dan status
+                const setVal = (id, val, unit, statusId, normalRange) => {
+                    const statusEl = document.getElementById(statusId);
+                    document.getElementById(id).innerText = val + unit;
+                    if(val >= normalRange[0] && val <= normalRange[1]) {
+                        statusEl.innerText = "Normal"; statusEl.className = "text-[10px] mt-1 text-green-600 font-medium";
+                    } else if (val === 0) {
+                        statusEl.innerText = "Data Kosong"; statusEl.className = "text-[10px] mt-1 text-gray-400 font-medium";
+                    } else {
+                        statusEl.innerText = "Warning"; statusEl.className = "text-[10px] mt-1 text-orange-500 font-medium";
+                    }
+                };
+
+                // Terapkan Nilai & Status
+                setVal('ph1Value', v.ph1.toFixed(1), '', 'ph1Status', [6, 7.5]);
+                setVal('ph2Value', v.ph2.toFixed(1), '', 'ph2Status', [6, 7.5]);
+                setVal('soil1Value', Math.round(v.soil1), '%', 'soil1Status', [40, 70]);
+                setVal('soil2Value', Math.round(v.soil2), '%', 'soil2Status', [40, 70]);
+                setVal('tempValue', v.temp.toFixed(1), '°', 'tempStatus', [20, 30]);
+                setVal('humValue', Math.round(v.hum), '%', 'humStatus', [50, 80]);
+                setVal('lightValue', Math.round(v.light), '', 'lightStatus', [300, 800]);
+
+                setText('lightSummary', Math.round(v.light) + ' Lx');
+                setText('last-update', time);
+                setText('status-log-thing', `Data sukses diterima pada ${time}`);
+
+                // Update Chart (Jika menggunakan Chart.js)
+                updateChartData(charts.ph1, time, v.ph1); updateChartData(charts.ph2, time, v.ph2);
+                updateChartData(charts.soil1, time, v.soil1); updateChartData(charts.soil2, time, v.soil2);
+                updateChartData(charts.temp, time, v.temp); updateChartData(charts.hum, time, v.hum);
+                updateChartData(charts.light, time, v.light);
+
+                // Update Average Data
+                dataHistory.temp.push(v.temp); dataHistory.hum.push(v.hum); dataHistory.light.push(v.light);
+                const avg = arr => arr.length ? (arr.slice(-50).reduce((a,b)=>a+b,0)/Math.min(arr.length, 50)).toFixed(1) : '-';
+                setText('avgTemp', avg(dataHistory.temp) + '°C'); setText('avgHum', avg(dataHistory.hum) + '%');
+                setText('avgLight', Math.round(avg(dataHistory.light)) + ' Lx');
+
+                // Update Log Table (Hanya entry terakhir)
+                const tbody = document.getElementById('logTableBody');
+                const row = `<tr class="hover:bg-gray-50 transition"><td class="px-4 py-3 font-mono text-xs">${time}</td><td class="px-4 py-3">${v.ph1.toFixed(1)}</td><td class="px-4 py-3">${v.ph2.toFixed(1)}</td><td class="px-4 py-3">${v.temp.toFixed(1)}</td><td class="px-4 py-3">${Math.round(v.hum)}</td><td class="px-4 py-3">${Math.round(v.soil1)}</td><td class="px-4 py-3">${Math.round(v.soil2)}</td><td class="px-4 py-3">${Math.round(v.light)}</td></tr>`;
+                tbody.innerHTML = ''; // Hapus semua baris
+                tbody.insertAdjacentHTML('afterbegin', row);
+                
+
+            } catch(e) {
+                // Log Gagal
+                document.getElementById('connIndicator').className = "w-2 h-2 rounded-full bg-red-500 mr-2";
+                document.getElementById('connText').innerText = "Terputus (TS)";
+                document.getElementById('connText').className = "text-xs font-semibold text-red-500";
+                setText('status-log-thing', `ERROR: Gagal mengambil data ThingSpeak. Cek Channel ID atau API Key.`);
+            }
+        }
+
+        function setText(id, txt) { const el = document.getElementById(id); if(el) el.textContent = txt; }
+
+        // Hilangkan semua fungsi kontrol pompa/servo yang ada di kode lama
+        
+        // Panggil fungsi fetchData setiap 5 detik (atau disesuaikan)
         setInterval(fetchData, 5000);
-
+        fetchData();
     </script>
 </body>
-
 </html>
-
